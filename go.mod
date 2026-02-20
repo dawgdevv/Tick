@@ -1,4 +1,4 @@
-module tick
+module github.com/dawgdevv/tick
 
 go 1.25.7
 

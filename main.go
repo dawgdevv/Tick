@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"tick/internal/db"
-	"tick/internal/handlers"
+	"github.com/dawgdevv/tick/internal/db"
+	"github.com/dawgdevv/tick/internal/handlers"
 )
 
 //go:embed web/dist/*

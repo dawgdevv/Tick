@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"tick/internal/db"
+	"github.com/dawgdevv/tick/internal/db"
 )
 
 type API struct {

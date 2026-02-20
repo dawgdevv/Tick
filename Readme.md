@@ -28,6 +28,17 @@ Designed to be fast, distraction-free, and fully usable without cloud services. 
 
 ## Installation
 
+### Global Install (Go)
+
+Users can install Tick directly from GitHub:
+
+```bash
+go install github.com/dawgdevv/tick@latest
+tick
+```
+
+> Make sure `$GOBIN` (or `$GOPATH/bin`) is in your `PATH`.
+
 ### From Binary
 
 Download the latest release for your platform from the releases page, extract, and run:
@@ -38,9 +49,28 @@ Download the latest release for your platform from the releases page, extract, a
 
 ### From Source
 
+Requirements:
+- Go 1.25+
+- Node.js 20+ and npm
+
 ```bash
-go build -o tick .
-./tick
+git clone <your-repo-url>
+cd tick
+make build
+./bin/tick
+```
+
+The `make build` command is the global project build command. It compiles the frontend (`web/dist`) and then builds the Go binary (`bin/tick`).
+
+### Build Commands
+
+```bash
+make help       # List available commands
+make deps       # Install frontend dependencies
+make web-build  # Build frontend assets
+make build      # Build frontend + backend binary
+make run        # Build and run
+make clean      # Clean build outputs
 ```
 
 ## Usage
@@ -79,4 +109,4 @@ Tick is built on these core principles:
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)
