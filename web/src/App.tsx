@@ -3,6 +3,7 @@ import { format, addDays, subDays } from "date-fns";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   X,
   Check,
@@ -13,6 +14,8 @@ import {
   MapPin,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
+import * as Popover from "@radix-ui/react-popover";
+import { Calendar } from "@/components/Calendar";
 import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -63,6 +66,7 @@ function pad2(n: number) {
 
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [quicklinks, setQuicklinks] = useState<Quicklink[]>([]);
   const [newTask, setNewTask] = useState("");
@@ -73,12 +77,15 @@ function App() {
   const [qlUrl, setQlUrl] = useState("");
 
   // Weather
-  const [weather, setWeather] = useState<WeatherState>({
+  const [weather, setWeather] = useState<WeatherState>(() => ({
     temp: null,
     condition: "",
     location: "",
-    status: "idle",
-  });
+    status:
+      typeof navigator !== "undefined" && navigator.geolocation
+        ? "loading"
+        : "error",
+  }));
 
   // Pomodoro — session count persists per calendar day
   const [pomMode, setPomMode] = useState<"work" | "break">("work");
@@ -106,12 +113,7 @@ function App() {
 
   // ── Weather (once on mount) ────────────────────────────────────────────────
   useEffect(() => {
-    setWeather((w) => ({ ...w, status: "loading" }));
-
-    if (!navigator.geolocation) {
-      setWeather((w) => ({ ...w, status: "error" }));
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
       async ({ coords: { latitude: lat, longitude: lon } }) => {
@@ -148,21 +150,9 @@ function App() {
   }, []);
 
   // ── Pomodoro tick ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!pomRunning) return;
-    const id = setInterval(
-      () => setPomTime((t) => Math.max(0, t - 1)),
-      1000
-    );
-    return () => clearInterval(id);
-  }, [pomRunning]);
-
-  // Switch mode when timer expires
-  useEffect(() => {
-    if (pomTime > 0 || !pomRunning) return;
+  const handlePomComplete = useCallback(() => {
     setPomRunning(false);
     if (pomMode === "work") {
-      // Use functional update so pomSessions isn't a dep
       setPomSessions((s) => {
         const next = s + 1;
         localStorage.setItem(
@@ -173,11 +163,27 @@ function App() {
       });
       setPomMode("break");
       setPomTime(POM_BREAK);
-    } else {
-      setPomMode("work");
-      setPomTime(POM_WORK);
+      return;
     }
-  }, [pomTime, pomRunning, pomMode]);
+    setPomMode("work");
+    setPomTime(POM_WORK);
+  }, [pomMode]);
+
+  useEffect(() => {
+    if (!pomRunning) return;
+    const id = setInterval(
+      () =>
+        setPomTime((t) => {
+          if (t <= 1) {
+            handlePomComplete();
+            return 0;
+          }
+          return t - 1;
+        }),
+      1000
+    );
+    return () => clearInterval(id);
+  }, [pomRunning, handlePomComplete]);
 
   const resetPom = () => {
     setPomRunning(false);
@@ -203,11 +209,19 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetchTasks();
-    setSelectedIdx(null);
+    const run = async () => {
+      await fetchTasks();
+      setSelectedIdx(null);
+    };
+    void run();
   }, [fetchTasks]);
 
-  useEffect(() => { fetchQuicklinks(); }, [fetchQuicklinks]);
+  useEffect(() => {
+    const run = async () => {
+      await fetchQuicklinks();
+    };
+    void run();
+  }, [fetchQuicklinks]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const addTask = async (e: React.FormEvent) => {
@@ -516,9 +530,34 @@ function App() {
             <ChevronLeft size={14} />
           </button>
 
-          <span className="font-mono text-[11px] tracking-[0.25em] text-[var(--secondary)] select-none">
-            {format(currentDate, "dd · MM · yyyy")}
-          </span>
+          <Popover.Root open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <Popover.Trigger asChild>
+              <button
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--hover)] transition-all duration-150 group cursor-pointer"
+                aria-label="Pick a date"
+              >
+                <span className="font-mono text-[11px] tracking-[0.25em] text-[var(--secondary)] group-hover:text-[var(--text)] select-none">
+                  {format(currentDate, "dd · MM · yyyy")}
+                </span>
+                <ChevronDown size={12} className="text-[var(--muted)] group-hover:text-[var(--text)] transition-colors" />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className="z-50 bg-[var(--panel)] border border-[var(--border)] rounded-xl shadow-2xl animate-fade-in"
+                align="center"
+                sideOffset={8}
+              >
+                <Calendar
+                  selectedDate={currentDate}
+                  onSelectDate={(date) => {
+                    setCurrentDate(date);
+                    setIsCalendarOpen(false);
+                  }}
+                />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
 
           <button
             onClick={() => setCurrentDate(addDays(currentDate, 1))}
