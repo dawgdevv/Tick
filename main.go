@@ -15,7 +15,7 @@ import (
 	"github.com/dawgdevv/tick/internal/handlers"
 )
 
-//go:embed web/dist/*
+//go:embed internal/webdist/* internal/webdist/assets/*
 var webFiles embed.FS
 
 var (
@@ -42,7 +42,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	dist, err := fs.Sub(webFiles, "web/dist")
+	dist, err := fs.Sub(webFiles, "internal/webdist")
 	if err != nil {
 		log.Fatal(err)
 	}

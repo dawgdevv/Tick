@@ -1,7 +1,7 @@
 APP_NAME := tick
 BIN_DIR := bin
 
-.PHONY: help deps web-build build run clean
+.PHONY: help deps web-build sync-webdist build run clean
 
 help:
 	@echo "Available commands:"
@@ -17,7 +17,14 @@ deps:
 web-build:
 	cd web && npm run build
 
-build: web-build
+sync-webdist: web-build
+	rm -rf internal/webdist
+	mkdir -p internal/webdist/assets
+	cp -f web/dist/index.html internal/webdist/
+	cp -f web/dist/favicon.svg internal/webdist/
+	cp -f web/dist/assets/* internal/webdist/assets/
+
+build: sync-webdist
 	mkdir -p $(BIN_DIR)
 	go build -o $(BIN_DIR)/$(APP_NAME) .
 
