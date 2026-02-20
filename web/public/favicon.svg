@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="7" fill="#0e0e11"/>
+  <rect width="32" height="32" rx="7" fill="none" stroke="#1b1b21" stroke-width="1"/>
+  <!-- Tick mark -->
+  <path
+    d="M6.5 16.5 L13 23 L25.5 9"
+    stroke="#4ade80"
+    stroke-width="2.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+</svg>

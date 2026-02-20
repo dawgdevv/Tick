@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #060608;
+  --panel: #0c0c10;
+  --border: #252532;
+  --hover: #111116;
+  --selected-bg: rgba(74, 222, 128, 0.045);
+  --text: #dddde3;
+  --secondary: #83839a;
+  --muted: #4e4e60;
+  --faint: #272730;
+  --accent: #4ade80;
+  --accent-bg: rgba(74, 222, 128, 0.06);
+  --accent-hover: rgba(74, 222, 128, 0.1);
+  --accent-border: rgba(74, 222, 128, 0.18);
+  --red: #f87171;
+  --blue: #60a5fa;
+}
+
+@layer base {
+  html {
+    font-family: "Outfit", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+/* Monospace overrides */
+.font-mono, code, kbd, pre {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 100px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* Modal animations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.animate-overlay-in {
+  animation: overlay-in 0.15s ease-out;
+}
+
+/* Task row transition */
+@keyframes task-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.task-enter {
+  animation: task-in 0.2s ease-out;
+}
+
+/* Checkbox custom look */
+input[type="checkbox"] {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--faint);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  flex-shrink: 0;
+}
+input[type="checkbox"]:hover {
+  border-color: var(--accent);
+}
+input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1.5px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--bg);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+/* Focus ring */
+input:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
