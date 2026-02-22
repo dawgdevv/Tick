@@ -205,17 +205,23 @@ window.tick-popup {{
 }}
 """
 
-def _api(method, url, data=None, timeout=3):
+def _api(method, url, data=None, timeout=4):
+    """Make an API call. Returns (parsed_json, True) on success, (None, False) on failure."""
     try:
         body = json.dumps(data).encode() if data else None
         req = urllib.request.Request(url, method=method, data=body)
         if body:
             req.add_header("Content-Type", "application/json")
         with urllib.request.urlopen(req, timeout=timeout) as r:
+            code = r.getcode()
             raw = r.read().decode()
-            return json.loads(raw) if raw.strip() else None
-    except Exception:
-        return None
+            if 200 <= code < 300:
+                parsed = json.loads(raw) if raw.strip() else None
+                return parsed, True
+            return None, False
+    except Exception as e:
+        print(f"[tick-tray] API error: {method} {url} → {e}")
+        return None, False
 
 class TickPopup(Gtk.Window):
     def __init__(self):
@@ -242,8 +248,9 @@ class TickPopup(Gtk.Window):
         self.pom_running = False
         self.pom_mode = "work"
         self.pom_timer_id = None
+        self._updating = False  # Guard: suppress focus-out during data refresh
 
-        self.connect("focus-out-event", lambda *_: self.hide())
+        self.connect("focus-out-event", self._on_focus_out)
 
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.main_box.get_style_context().add_class("tick-container")
@@ -251,9 +258,15 @@ class TickPopup(Gtk.Window):
         self._rebuild()
         self._refresh_data()
 
+    def _on_focus_out(self, widget, event):
+        """Hide the popup unless we're in the middle of a data refresh."""
+        if not self._updating:
+            self.hide()
+        return False
+
     def _rebuild(self):
         for child in self.main_box.get_children():
-            self.main_box.remove(child)
+            child.destroy()
 
         # HEADER
         hdr = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -365,7 +378,7 @@ class TickPopup(Gtk.Window):
                 
                 lbl = Gtk.LinkButton.new_with_label(link.get("url", "#"), link.get("name", "—"))
                 lbl.get_child().get_style_context().add_class("tick-link-label")
-                lbl.set_xalign(0)
+                lbl.set_halign(Gtk.Align.START)
                 row.pack_start(lbl, True, True, 0)
                 content.pack_start(row, False, False, 0)
 
@@ -432,19 +445,21 @@ class TickPopup(Gtk.Window):
 
     def _toggle_task(self, task_id):
         def do():
-            _api("PATCH", f"{API_TASKS}?id={task_id}")
-            GLib.idle_add(self._refresh_data)
+            _, ok = _api("PATCH", f"{API_TASKS}?id={task_id}")
+            if ok:
+                GLib.idle_add(self._refresh_data_async)
         threading.Thread(target=do, daemon=True).start()
 
     def _on_add_task(self, entry):
         title = entry.get_text().strip()
         if not title: return
+        entry.set_text("")
         date = datetime.now().strftime("%Y-%m-%d")
         def do():
-            _api("POST", API_TASKS, {"title": title, "date": date})
-            GLib.idle_add(self._refresh_data)
+            _, ok = _api("POST", API_TASKS, {"title": title, "date": date})
+            if ok:
+                GLib.idle_add(self._refresh_data_async)
         threading.Thread(target=do, daemon=True).start()
-        entry.set_text("")
 
     def _toggle_pom(self, _btn):
         self.pom_running = not self.pom_running
@@ -477,25 +492,52 @@ class TickPopup(Gtk.Window):
             self.time_label.set_text(f"{m:02d}:{s:02d}")
         return True
 
+    def _refresh_data_async(self):
+        """Kick off a background thread to fetch data, then rebuild on main thread."""
+        def do():
+            tasks_data, t_ok = _api("GET", API_TASKS)
+            links_data, l_ok = _api("GET", API_LINKS)
+            def apply():
+                self._updating = True
+                if t_ok:
+                    self.tasks = tasks_data if tasks_data is not None else []
+                if l_ok:
+                    self.links = links_data if links_data is not None else []
+                self._rebuild()
+                self._updating = False
+                return False
+            GLib.idle_add(apply)
+        threading.Thread(target=do, daemon=True).start()
+
     def _refresh_data(self):
-        self.tasks = _api("GET", API_TASKS) or []
-        self.links = _api("GET", API_LINKS) or []
+        """Synchronous refresh — only used for initial load."""
+        tasks_data, t_ok = _api("GET", API_TASKS)
+        links_data, l_ok = _api("GET", API_LINKS)
+        if t_ok:
+            self.tasks = tasks_data if tasks_data is not None else []
+        if l_ok:
+            self.links = links_data if links_data is not None else []
         self._rebuild()
 
     def toggle_visible(self):
         if self.get_visible():
             self.hide()
         else:
-            self._refresh_data()
+            # Position the window near the tray icon, clamped to screen bounds
             display = Gdk.Display.get_default()
             seat = display.get_default_seat()
             pointer = seat.get_pointer()
             _, x, y = pointer.get_position()
             screen = display.get_default_screen()
             sw = screen.get_width()
-            self.move(min(x - 180, sw - 380), 32)
+            sh = screen.get_height()
+            wx = max(10, min(x - 180, sw - 380))
+            wy = max(10, min(32, sh - 600))
+            self.move(wx, wy)
             self.show_all()
             self.present()
+            # Fetch data in background so the window appears instantly
+            self._refresh_data_async()
 
 class TickTray:
     def __init__(self):
@@ -528,7 +570,7 @@ class TickTray:
 
     def _auto_refresh(self):
         if self.popup.get_visible():
-            self.popup._refresh_data()
+            self.popup._refresh_data_async()
         return True
 
 def main():

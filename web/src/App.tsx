@@ -227,38 +227,48 @@ function App() {
   const addTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.trim()) return;
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTask.trim(), date: formattedDate }),
-    });
-    if (res.ok) { setNewTask(""); fetchTasks(); }
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTask.trim(), date: formattedDate }),
+      });
+      if (res.ok) { setNewTask(""); await fetchTasks(); }
+    } catch { await fetchTasks(); }
   };
 
   const toggleTask = useCallback(async (id: number) => {
-    const res = await fetch(`/api/tasks?id=${id}`, { method: "PATCH" });
-    if (res.ok) {
-      const { completed } = await res.json();
-      setTasks((p) => p.map((t) => (t.id === id ? { ...t, completed } : t)));
-    }
-  }, []);
+    try {
+      const res = await fetch(`/api/tasks?id=${id}`, { method: "PATCH" });
+      if (res.ok) {
+        const { completed } = await res.json();
+        setTasks((p) => p.map((t) => (t.id === id ? { ...t, completed } : t)));
+      } else {
+        await fetchTasks();
+      }
+    } catch { await fetchTasks(); }
+  }, [fetchTasks]);
 
   const deleteTask = useCallback(async (id: number) => {
-    const res = await fetch(`/api/tasks?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setTasks((prev) => {
-        const di = prev.findIndex((t) => t.id === id);
-        const next = prev.filter((t) => t.id !== id);
-        setSelectedIdx((si) => {
-          if (si === null) return null;
-          if (di < si) return si - 1;
-          if (di === si) return next.length ? Math.min(si, next.length - 1) : null;
-          return si;
+    try {
+      const res = await fetch(`/api/tasks?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setTasks((prev) => {
+          const di = prev.findIndex((t) => t.id === id);
+          const next = prev.filter((t) => t.id !== id);
+          setSelectedIdx((si) => {
+            if (si === null) return null;
+            if (di < si) return si - 1;
+            if (di === si) return next.length ? Math.min(si, next.length - 1) : null;
+            return si;
+          });
+          return next;
         });
-        return next;
-      });
-    }
-  }, []);
+      } else {
+        await fetchTasks();
+      }
+    } catch { await fetchTasks(); }
+  }, [fetchTasks]);
 
   const addQuicklink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,17 +276,22 @@ function App() {
     const url = /^https?:\/\//i.test(qlUrl.trim())
       ? qlUrl.trim()
       : `https://${qlUrl.trim()}`;
-    const res = await fetch("/api/quicklinks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: qlName.trim(), url }),
-    });
-    if (res.ok) { setQlName(""); setQlUrl(""); setQlOpen(false); fetchQuicklinks(); }
+    try {
+      const res = await fetch("/api/quicklinks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: qlName.trim(), url }),
+      });
+      if (res.ok) { setQlName(""); setQlUrl(""); setQlOpen(false); await fetchQuicklinks(); }
+    } catch { await fetchQuicklinks(); }
   };
 
   const deleteQuicklink = async (id: number) => {
-    const res = await fetch(`/api/quicklinks?id=${id}`, { method: "DELETE" });
-    if (res.ok) setQuicklinks((p) => p.filter((l) => l.id !== id));
+    try {
+      const res = await fetch(`/api/quicklinks?id=${id}`, { method: "DELETE" });
+      if (res.ok) setQuicklinks((p) => p.filter((l) => l.id !== id));
+      else await fetchQuicklinks();
+    } catch { await fetchQuicklinks(); }
   };
 
   // ── Keyboard shortcuts ─────────────────────────────────────────────────────

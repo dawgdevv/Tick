@@ -30,3 +30,8 @@ tick
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
