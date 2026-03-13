@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,7 +18,18 @@ func NewAPI(database *db.DB) *API {
 	return &API{db: database}
 }
 
+func cors(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
 func (api *API) Tasks(w http.ResponseWriter, r *http.Request) {
+	cors(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(204)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 
 	date := r.URL.Query().Get("date")
@@ -81,10 +93,18 @@ func (api *API) Tasks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(204)
+
+	default:
+		http.Error(w, "method not allowed", 405)
 	}
 }
 
 func (api *API) Quicklinks(w http.ResponseWriter, r *http.Request) {
+	cors(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(204)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 
 	switch r.Method {
@@ -127,9 +147,16 @@ func (api *API) Quicklinks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := api.db.DeleteQuicklink(id); err != nil {
-			http.Error(w, err.Error(), 500)
+			if errors.Is(err, db.ErrNotFound) {
+				http.Error(w, "quicklink not found", 404)
+			} else {
+				http.Error(w, err.Error(), 500)
+			}
 			return
 		}
 		w.WriteHeader(204)
+
+	default:
+		http.Error(w, "method not allowed", 405)
 	}
 }

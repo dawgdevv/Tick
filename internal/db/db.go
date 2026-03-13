@@ -14,11 +14,16 @@ type DB struct {
 }
 
 func Open(path string) (*DB, error) {
-	db, err := sql.Open("sqlite3", path+"?_foreign_keys=on")
+	db, err := sql.Open("sqlite3", path+"?_foreign_keys=on&_journal_mode=WAL")
 	if err != nil {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
+	// Enable WAL mode for better concurrent read/write handling
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		db.Close()
+		return nil, err
+	}
 	return &DB{db}, nil
 }
 
@@ -57,7 +62,7 @@ func (db *DB) GetTasks(date string) ([]Task, error) {
 	}
 	defer rows.Close()
 
-	var tasks []Task
+	tasks := make([]Task, 0)
 	for rows.Next() {
 		var t Task
 		var completed int
@@ -118,7 +123,7 @@ func (db *DB) GetQuicklinks() ([]Quicklink, error) {
 	}
 	defer rows.Close()
 
-	var links []Quicklink
+	links := make([]Quicklink, 0)
 	for rows.Next() {
 		var l Quicklink
 		if err := rows.Scan(&l.ID, &l.Name, &l.URL, &l.CreatedAt); err != nil {
@@ -139,6 +144,13 @@ func (db *DB) CreateQuicklink(name, url string) (Quicklink, error) {
 }
 
 func (db *DB) DeleteQuicklink(id int64) error {
-	_, err := db.Exec("DELETE FROM quicklinks WHERE id = ?", id)
-	return err
+	result, err := db.Exec("DELETE FROM quicklinks WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
