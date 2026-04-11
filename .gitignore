@@ -35,3 +35,4 @@ tick
 __pycache__/
 *.pyc
 *.pyo
+.kilo/
