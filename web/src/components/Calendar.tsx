@@ -45,7 +45,7 @@ export function Calendar({ selectedDate, onSelectDate, className }: CalendarProp
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={handlePrevMonth}
-          className="p-1 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-[var(--panel-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150 cursor-pointer"
           type="button"
         >
           <ChevronLeft size={16} />
@@ -55,7 +55,7 @@ export function Calendar({ selectedDate, onSelectDate, className }: CalendarProp
         </span>
         <button
           onClick={handleNextMonth}
-          className="p-1 rounded hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg hover:bg-[var(--panel-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150 cursor-pointer"
           type="button"
         >
           <ChevronRight size={16} />
@@ -67,7 +67,7 @@ export function Calendar({ selectedDate, onSelectDate, className }: CalendarProp
         {weekDays.map((d) => (
           <div
             key={d}
-            className="text-center text-[10px] font-mono text-[var(--muted)] select-none uppercase tracking-wider"
+            className="text-center text-[10px] font-mono text-[var(--text-muted)] select-none uppercase tracking-wider"
           >
             {d}
           </div>
@@ -86,10 +86,10 @@ export function Calendar({ selectedDate, onSelectDate, className }: CalendarProp
               key={dayItem.toISOString()}
               onClick={() => onSelectDate(dayItem)}
               className={cn(
-                "h-8 w-8 flex items-center justify-center rounded-md text-xs transition-all font-mono relative cursor-pointer",
-                !isCurrentMonth && "text-[var(--faint)] opacity-40 hover:opacity-100",
-                isCurrentMonth && !isSelected && "text-[var(--secondary)] hover:bg-[var(--hover)] hover:text-[var(--text)]",
-                isSelected && "bg-[var(--accent)] text-[var(--bg)] font-bold shadow-sm hover:bg-[var(--accent)] hover:text-[var(--bg)]",
+                "h-8 w-8 flex items-center justify-center rounded-lg text-xs font-mono relative cursor-pointer transition-all duration-200",
+                !isCurrentMonth && "text-[var(--text-faint)] opacity-40 hover:opacity-100",
+                isCurrentMonth && !isSelected && !isDayToday && "text-[var(--text-secondary)] hover:bg-[var(--panel-hover)] hover:text-[var(--text)]",
+                isSelected && "bg-[var(--accent)] text-[var(--bg)] font-bold shadow-lg shadow-[var(--accent-glow)] hover:bg-[var(--accent)]",
                 !isSelected && isDayToday && "text-[var(--accent)] font-medium border border-[var(--accent-border)] bg-[var(--accent-bg)]"
               )}
               type="button"

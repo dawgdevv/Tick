@@ -1,14 +1,15 @@
 APP_NAME := tick
 BIN_DIR := bin
 
-.PHONY: help deps web-build sync-webdist build run clean
+.PHONY: help deps web-build sync-webdist build run dev clean
 
 help:
 	@echo "Available commands:"
 	@echo "  make deps      Install frontend dependencies"
 	@echo "  make web-build Build frontend assets"
 	@echo "  make build     Build frontend + Go binary"
-	@echo "  make run       Run the app"
+	@echo "  make run       Run the app (production build)"
+	@echo "  make dev       Run Go server in background (for dev)"
 	@echo "  make clean     Remove build output"
 
 deps:
@@ -30,6 +31,13 @@ build: sync-webdist
 
 run: build
 	./$(BIN_DIR)/$(APP_NAME)
+
+dev:
+	@echo "Starting Go server in background..."
+	go run . &
+	@echo "Server PID: $$!"
+	@echo "Test: curl http://localhost:8080/api/tasks"
+	@echo "Stop: kill $$!"
 
 clean:
 	rm -rf $(BIN_DIR) web/dist

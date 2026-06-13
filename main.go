@@ -50,6 +50,10 @@ func main() {
 
 	api := handlers.NewAPI(database)
 	mux.HandleFunc("/api/tasks", api.Tasks)
+	mux.HandleFunc("/api/tasks/timer", api.TaskTimer)
+	mux.HandleFunc("/api/subtasks", api.Subtasks)
+	mux.HandleFunc("/api/subtask", api.Subtask)
+	mux.HandleFunc("/api/scratchpad", api.Scratchpad)
 	mux.HandleFunc("/api/quicklinks", api.Quicklinks)
 
 	mux.HandleFunc("/api/time", func(w http.ResponseWriter, r *http.Request) {
