@@ -5,7 +5,7 @@ import { useClock } from "@/hooks/useClock";
 import { useWeather } from "@/hooks/useWeather";
 import { usePomodoro } from "@/hooks/usePomodoro";
 import { useTasks } from "@/hooks/useTasks";
-import { useQuicklinks } from "@/hooks/useQuicklinks";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import { useScratchpad } from "@/hooks/useScratchpad";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
@@ -18,8 +18,8 @@ import { ChevronLeft, ChevronRight, ChevronDown, CalendarDays } from "lucide-rea
 import * as Popover from "@radix-ui/react-popover";
 
 function App() {
-  const [leftOpen, setLeftOpen] = useState(false);
-  const [rightOpen, setRightOpen] = useState(false);
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -29,7 +29,7 @@ function App() {
   const weather = useWeather();
   const pomodoro = usePomodoro();
   const tasks = useTasks(formattedDate);
-  const quicklinks = useQuicklinks();
+  const bookmarks = useBookmarks();
   const scratchpad = useScratchpad();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -216,9 +216,13 @@ function App() {
           style={{ width: "var(--sidebar-width)" }}
         >
           <RightPanel
-            quicklinks={quicklinks.quicklinks}
-            onAddQuicklink={quicklinks.addQuicklink}
-            onDeleteQuicklink={quicklinks.deleteQuicklink}
+            bookmarks={bookmarks.bookmarks}
+            onAddBookmark={bookmarks.addBookmark}
+            onAddFolder={bookmarks.addFolder}
+            onUpdateBookmark={bookmarks.updateBookmark}
+            onDeleteBookmark={bookmarks.deleteBookmark}
+            onImportBookmarks={bookmarks.importBookmarks}
+            onExportBookmarks={bookmarks.exportBookmarks}
           />
         </aside>
       </div>

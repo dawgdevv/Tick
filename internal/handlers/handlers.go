@@ -300,7 +300,7 @@ func (api *API) Scratchpad(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ─── Quicklinks ─────────────────────────────────────────────────────────────
+// ─── Quicklinks / Bookmarks ───────────────────────────────────────────────────
 
 func (api *API) Quicklinks(w http.ResponseWriter, r *http.Request) {
 	cors(w)
@@ -321,8 +321,10 @@ func (api *API) Quicklinks(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodPost:
 		var req struct {
-			Name string `json:"name"`
-			URL  string `json:"url"`
+			Name     string `json:"name"`
+			URL      string `json:"url"`
+			Type     string `json:"type"`
+			ParentID *int64 `json:"parent_id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), 400)
@@ -332,13 +334,44 @@ func (api *API) Quicklinks(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "name is required", 400)
 			return
 		}
-		if req.URL == "" {
-			http.Error(w, "url is required", 400)
+		linkType := req.Type
+		if linkType == "" {
+			linkType = "bookmark"
+		}
+		if linkType == "bookmark" && req.URL == "" {
+			http.Error(w, "url is required for bookmarks", 400)
 			return
 		}
-		link, err := api.db.CreateQuicklink(req.Name, req.URL)
+		link, err := api.db.CreateQuicklink(req.Name, req.URL, linkType, req.ParentID)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
+			return
+		}
+		json.NewEncoder(w).Encode(link)
+
+	case http.MethodPatch:
+		id, err := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
+		if err != nil {
+			http.Error(w, "invalid id", 400)
+			return
+		}
+		var req struct {
+			Name      *string `json:"name"`
+			URL       *string `json:"url"`
+			ParentID  *int64  `json:"parent_id"`
+			SortOrder *int    `json:"sort_order"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		link, err := api.db.UpdateQuicklink(id, req.Name, req.URL, req.ParentID, req.SortOrder)
+		if err != nil {
+			if errors.Is(err, db.ErrNotFound) {
+				http.Error(w, "bookmark not found", 404)
+			} else {
+				http.Error(w, err.Error(), 500)
+			}
 			return
 		}
 		json.NewEncoder(w).Encode(link)
@@ -351,7 +384,7 @@ func (api *API) Quicklinks(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := api.db.DeleteQuicklink(id); err != nil {
 			if errors.Is(err, db.ErrNotFound) {
-				http.Error(w, "quicklink not found", 404)
+				http.Error(w, "bookmark not found", 404)
 			} else {
 				http.Error(w, err.Error(), 500)
 			}
@@ -362,4 +395,103 @@ func (api *API) Quicklinks(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", 405)
 	}
+}
+
+func (api *API) QuicklinksExport(w http.ResponseWriter, r *http.Request) {
+	cors(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(204)
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", 405)
+		return
+	}
+
+	links, err := api.db.GetQuicklinks()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "html"
+	}
+
+	switch format {
+	case "json":
+		data, err := db.ExportQuicklinksJSON(links)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Disposition", `attachment; filename="bookmarks.json"`)
+		w.Write(data)
+	case "html":
+		html := db.ExportQuicklinksHTML(links)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="bookmarks.html"`)
+		w.Write([]byte(html))
+	default:
+		http.Error(w, "format must be html or json", 400)
+	}
+}
+
+func (api *API) QuicklinksImport(w http.ResponseWriter, r *http.Request) {
+	cors(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(204)
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", 405)
+		return
+	}
+
+	var req struct {
+		Format   string `json:"format"`
+		Data     string `json:"data"`
+		ParentID *int64 `json:"parent_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	if req.Data == "" {
+		http.Error(w, "data is required", 400)
+		return
+	}
+	if req.Format == "" {
+		req.Format = "html"
+	}
+
+	var nodes []db.ImportNode
+	var err error
+	switch req.Format {
+	case "html":
+		nodes, err = db.ParseNetscapeBookmarks(req.Data)
+	case "json":
+		nodes, err = db.ParseJSONBookmarks(req.Data)
+	default:
+		http.Error(w, "format must be html or json", 400)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	if err := api.db.ImportQuicklinks(nodes, req.ParentID); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	links, err := api.db.GetQuicklinks()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(links)
 }

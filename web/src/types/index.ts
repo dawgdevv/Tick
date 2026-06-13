@@ -34,6 +34,14 @@ export interface Quicklink {
   id: number;
   name: string;
   url: string;
+  type: "bookmark" | "folder";
+  parent_id: number | null;
+  sort_order: number;
+  created_at?: string;
+}
+
+export interface BookmarkNode extends Quicklink {
+  children: BookmarkNode[];
 }
 
 export interface WeatherState {

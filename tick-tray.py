@@ -369,6 +369,10 @@ class TickPopup(Gtk.Window):
             content.pack_start(emp, False, False, 0)
         else:
             for link in self.links:
+                if link.get("type") == "folder" or not link.get("url"):
+                    continue
+                if link.get("type") == "folder" or not link.get("url"):
+                    continue
                 row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
                 row.get_style_context().add_class("tick-link-row")
                 

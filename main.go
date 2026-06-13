@@ -55,6 +55,8 @@ func main() {
 	mux.HandleFunc("/api/subtask", api.Subtask)
 	mux.HandleFunc("/api/scratchpad", api.Scratchpad)
 	mux.HandleFunc("/api/quicklinks", api.Quicklinks)
+	mux.HandleFunc("/api/quicklinks/export", api.QuicklinksExport)
+	mux.HandleFunc("/api/quicklinks/import", api.QuicklinksImport)
 
 	mux.HandleFunc("/api/time", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
