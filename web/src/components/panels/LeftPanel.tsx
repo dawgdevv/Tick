@@ -1,5 +1,6 @@
 import { format } from "date-fns";
-import { MapPin, Play, Pause, RotateCcw } from "lucide-react";
+import { MapPin, Play, Pause, RotateCcw, StickyNote } from "lucide-react";
+import { FieldTextarea } from "@/components/ui/FieldTextarea";
 import type { WeatherState, Scratchpad } from "@/types";
 
 interface LeftPanelProps {
@@ -179,18 +180,19 @@ export function LeftPanel({
 
       {/* Scratchpad */}
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="px-6 pt-4 pb-2">
-          <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)] font-medium">
+        <div className="px-6 pt-5 pb-3">
+          <span className="section-label">
+            <StickyNote size={12} className="text-[var(--text-faint)]" strokeWidth={1.75} />
             scratchpad
           </span>
         </div>
-        <div className="px-6 pb-4 flex-1 min-h-0">
-          <textarea
+        <div className="px-6 pb-5 flex-1 min-h-0">
+          <FieldTextarea
             value={scratchpad?.content || ""}
             onChange={(e) => onUpdateScratchpad(e.target.value)}
             placeholder="Jot down quick notes…"
-            className="w-full h-full bg-[var(--bg-elevated)] rounded-lg border border-[var(--border)] p-3 text-[12px] text-[var(--text-secondary)] placeholder:text-[var(--text-faint)] outline-none resize-none focus:border-[var(--accent)] transition-colors duration-200 custom-scrollbar"
             spellCheck={false}
+            className="h-full"
           />
         </div>
       </div>

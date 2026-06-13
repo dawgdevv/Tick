@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Link2, Plus, X } from "lucide-react";
 import { AddQuicklinkModal } from "@/components/quicklink/AddQuicklinkModal";
 import type { Quicklink } from "@/types";
 
@@ -16,7 +16,8 @@ export function RightPanel({ quicklinks, onAddQuicklink, onDeleteQuicklink }: Ri
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-5">
-        <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-muted)] font-medium">
+        <span className="section-label">
+          <Link2 size={12} className="text-[var(--text-faint)]" strokeWidth={1.75} />
           quick links
         </span>
 

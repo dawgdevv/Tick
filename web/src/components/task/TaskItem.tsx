@@ -1,4 +1,5 @@
 import { Check, Trash2, Pencil, Plus, Timer, ChevronDown, ChevronRight, Repeat } from "lucide-react";
+import { PrioritySelector } from "@/components/ui/PrioritySelector";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { Task, Priority } from "@/types";
@@ -21,6 +22,12 @@ const priorityColors: Record<Priority, string> = {
   high: "var(--error)",
   normal: "var(--accent)",
   low: "var(--text-muted)",
+};
+
+const recurringLabels: Record<string, string> = {
+  daily: "Daily",
+  weekdays: "Weekdays",
+  weekly: "Weekly",
 };
 
 function formatTime(seconds: number) {
@@ -133,14 +140,23 @@ export function TaskItem({
 
   const handleAddSubtask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subtaskInput.trim()) return;
+    if (!subtaskInput.trim() || task.id < 1) return;
     onAddSubtask(task.id, subtaskInput.trim());
     setSubtaskInput("");
+    setExpanded(true);
+  };
+
+  const handleRowClick = (e: React.MouseEvent) => {
+    if (editing) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("button, input, form, a")) return;
+    onSelect(index === selectedIdx ? null : index);
   };
 
   const subtaskDone = task.subtasks?.filter((s) => s.completed).length || 0;
   const subtaskTotal = task.subtasks?.length || 0;
   const hasSubtasks = subtaskTotal > 0;
+  const showSubtasks = isSelected || expanded;
 
   return (
     <div
@@ -153,14 +169,13 @@ export function TaskItem({
       )}
     >
       {/* Main Row */}
-      <button
-        onClick={() => onSelect(index === selectedIdx ? null : index)}
-        onDoubleClick={handleDoubleClick}
+      <div
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left cursor-pointer"
-        aria-pressed={isSelected && !editing}
+        onClick={handleRowClick}
       >
         {/* Toggle */}
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onToggle(task.id); }}
           className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-all duration-200"
           style={{
@@ -185,7 +200,7 @@ export function TaskItem({
 
         {/* Title or Edit Input */}
         {editing ? (
-          <div className="flex-1 flex items-center gap-2">
+          <div className="flex-1 flex flex-col gap-2.5 min-w-0">
             <input
               ref={inputRef}
               type="text"
@@ -193,27 +208,25 @@ export function TaskItem({
               onChange={(e) => setEditTitle(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleSave}
-              onClick={(e) => e.stopPropagation()}
-              className="flex-1 bg-[var(--bg)] border border-[var(--accent-border)] rounded-lg px-3 py-1 text-[14px] text-[var(--text)] outline-none focus:border-[var(--accent)]"
+              className="task-compose-input"
             />
-            <select
-              value={editPriority}
-              onChange={(e) => setEditPriority(e.target.value as Priority)}
-              onClick={(e) => e.stopPropagation()}
-              className="text-[11px] bg-[var(--bg)] text-[var(--text-secondary)] rounded px-2 py-1 outline-none border border-[var(--border)]"
-            >
-              <option value="high">High</option>
-              <option value="normal">Normal</option>
-              <option value="low">Low</option>
-            </select>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-faint)] font-medium shrink-0">
+                Priority
+              </span>
+              <PrioritySelector
+                value={editPriority}
+                onChange={setEditPriority}
+                size="sm"
+              />
+            </div>
           </div>
         ) : (
           <span
+            onDoubleClick={(e) => { e.stopPropagation(); handleDoubleClick(); }}
             className={cn(
-              "flex-1 text-[14px] leading-relaxed select-none transition-colors duration-200",
-              task.completed
-                ? "line-through text-[var(--text-faint)]"
-                : "text-[var(--text)]"
+              "task-title text-left select-none transition-colors duration-200 min-w-0",
+              task.completed && "task-title--done"
             )}
           >
             {task.title}
@@ -225,9 +238,9 @@ export function TaskItem({
           <div className="flex items-center gap-2 shrink-0">
             {/* Recurring badge */}
             {task.recurring && (
-              <span className="flex items-center gap-1 text-[10px] text-[var(--accent)] bg-[var(--accent-bg)] px-1.5 py-0.5 rounded">
-                <Repeat size={9} />
-                {task.recurring_type}
+              <span className="flex items-center gap-1.5 text-[10px] font-medium text-[var(--accent)] bg-[var(--accent-bg)] border border-[var(--accent-border)] px-2 py-0.5 rounded-md">
+                <Repeat size={10} strokeWidth={2} />
+                {recurringLabels[task.recurring_type] ?? task.recurring_type}
               </span>
             )}
 
@@ -240,6 +253,7 @@ export function TaskItem({
 
             {/* Timer */}
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); handleTimerToggle(); }}
               className={cn(
                 "flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded transition-all duration-150",
@@ -256,6 +270,7 @@ export function TaskItem({
             {/* Expand */}
             {hasSubtasks && (
               <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
                 className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--panel-hover)] transition-all duration-150"
               >
@@ -269,6 +284,7 @@ export function TaskItem({
         {!editing && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <button
+              type="button"
               data-edit-btn
               onClick={(e) => { e.stopPropagation(); setEditing(true); setEditTitle(task.title); setEditPriority(task.priority); }}
               className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-bg)] transition-all duration-200"
@@ -277,6 +293,7 @@ export function TaskItem({
               <Pencil size={13} />
             </button>
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
               className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-all duration-200"
               aria-label="Delete task"
@@ -285,10 +302,10 @@ export function TaskItem({
             </button>
           </div>
         )}
-      </button>
+      </div>
 
       {/* Subtasks */}
-      {(expanded || isSelected) && hasSubtasks && (
+      {showSubtasks && hasSubtasks && (
         <div className="px-4 pb-3 pl-14 space-y-1">
           {task.subtasks?.map((subtask) => (
             <div
@@ -296,6 +313,7 @@ export function TaskItem({
               className="flex items-center gap-2 group/subtask"
             >
               <button
+                type="button"
                 onClick={() => onToggleSubtask(subtask.id)}
                 className="w-4 h-4 rounded-sm flex items-center justify-center shrink-0 border transition-all duration-150"
                 style={{
@@ -309,15 +327,14 @@ export function TaskItem({
               </button>
               <span
                 className={cn(
-                  "flex-1 text-[12px] transition-colors duration-150",
-                  subtask.completed
-                    ? "line-through text-[var(--text-faint)]"
-                    : "text-[var(--text-secondary)]"
+                  "task-subtitle",
+                  subtask.completed && "task-subtitle--done"
                 )}
               >
                 {subtask.title}
               </span>
               <button
+                type="button"
                 onClick={() => onDeleteSubtask(subtask.id)}
                 className="opacity-0 group-hover/subtask:opacity-100 p-0.5 rounded text-[var(--text-faint)] hover:text-[var(--error)] transition-all duration-150"
               >
@@ -325,33 +342,25 @@ export function TaskItem({
               </button>
             </div>
           ))}
-          
-          {/* Add subtask input */}
-          <form onSubmit={handleAddSubtask} className="flex items-center gap-2 mt-1">
-            <Plus size={10} className="text-[var(--text-muted)] shrink-0" />
-            <input
-              type="text"
-              value={subtaskInput}
-              onChange={(e) => setSubtaskInput(e.target.value)}
-              placeholder="Add subtask…"
-              className="flex-1 bg-transparent outline-none text-[12px] text-[var(--text-secondary)] placeholder:text-[var(--text-faint)] py-1"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </form>
         </div>
       )}
 
-      {/* Add subtask when selected but no subtasks yet */}
-      {isSelected && !hasSubtasks && !editing && (
+      {/* Add subtask when selected */}
+      {isSelected && !editing && (
         <div className="px-4 pb-3 pl-14">
-          <form onSubmit={handleAddSubtask} className="flex items-center gap-2">
-            <Plus size={10} className="text-[var(--text-muted)] shrink-0" />
+          {!hasSubtasks && (
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-faint)] font-medium mb-2">
+              Subtasks
+            </div>
+          )}
+          <form onSubmit={handleAddSubtask} className="flex items-center gap-2.5">
+            <Plus size={12} className="text-[var(--text-faint)] shrink-0" strokeWidth={1.75} />
             <input
               type="text"
               value={subtaskInput}
               onChange={(e) => setSubtaskInput(e.target.value)}
               placeholder="Add subtask…"
-              className="flex-1 bg-transparent outline-none text-[12px] text-[var(--text-secondary)] placeholder:text-[var(--text-faint)] py-1"
+              className="task-compose-input task-compose-input--subtask"
               onClick={(e) => e.stopPropagation()}
             />
           </form>

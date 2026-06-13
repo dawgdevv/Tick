@@ -64,7 +64,7 @@ export const CenterPanel = forwardRef<HTMLInputElement, CenterPanelProps>(
         </div>
 
         {/* Add Task Input */}
-        <footer className="shrink-0 px-6 py-4 border-t border-[var(--divider)]">
+        <footer className="shrink-0 px-6 py-5 border-t border-[var(--divider)] bg-[var(--bg)]">
           <TaskInput
             ref={ref}
             value={newTask}

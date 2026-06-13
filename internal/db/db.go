@@ -19,7 +19,7 @@ func Open(path string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(1)
+	db.SetMaxOpenConns(4)
 	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
 		db.Close()
 		return nil, err
@@ -64,6 +64,48 @@ func (db *DB) Migrate() error {
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
+	if err != nil {
+		return err
+	}
+
+	// Upgrade existing databases created before new columns were added
+	migrations := []struct {
+		table, column, definition string
+	}{
+		{"tasks", "priority", "TEXT DEFAULT 'normal'"},
+		{"tasks", "recurring", "INTEGER DEFAULT 0"},
+		{"tasks", "recurring_type", "TEXT DEFAULT 'none'"},
+		{"tasks", "timer_seconds", "INTEGER DEFAULT 0"},
+		{"tasks", "created_at", "TEXT DEFAULT CURRENT_TIMESTAMP"},
+	}
+	for _, m := range migrations {
+		if err := db.addColumnIfNotExists(m.table, m.column, m.definition); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (db *DB) addColumnIfNotExists(table, column, definition string) error {
+	rows, err := db.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, ctype string
+		var dfltValue sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return nil
+		}
+	}
+	_, err = db.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition)
 	return err
 }
 
@@ -106,15 +148,18 @@ func (db *DB) GetTasks(date string) ([]Task, error) {
 		}
 		t.Completed = completed == 1
 		t.Recurring = recurring == 1
-		
-		// Load subtasks
-		subtasks, err := db.GetSubtasks(t.ID)
+		tasks = append(tasks, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range tasks {
+		subtasks, err := db.GetSubtasks(tasks[i].ID)
 		if err != nil {
 			return nil, err
 		}
-		t.Subtasks = subtasks
-		
-		tasks = append(tasks, t)
+		tasks[i].Subtasks = subtasks
 	}
 	return tasks, nil
 }
@@ -147,8 +192,9 @@ func (db *DB) ToggleTask(id int64) (bool, error) {
 
 func (db *DB) UpdateTask(id int64, title, priority string) (Task, error) {
 	var task Task
+	var completed, recurring int
 	err := db.QueryRow("SELECT id, title, completed, date, priority, recurring, recurring_type, timer_seconds, created_at FROM tasks WHERE id = ?", id).Scan(
-		&task.ID, &task.Title, &task.Completed, &task.Date, &task.Priority, &task.Recurring, &task.RecurringType, &task.TimerSeconds, &task.CreatedAt,
+		&task.ID, &task.Title, &completed, &task.Date, &task.Priority, &recurring, &task.RecurringType, &task.TimerSeconds, &task.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -156,6 +202,8 @@ func (db *DB) UpdateTask(id int64, title, priority string) (Task, error) {
 		}
 		return Task{}, err
 	}
+	task.Completed = completed == 1
+	task.Recurring = recurring == 1
 	_, err = db.Exec("UPDATE tasks SET title = ?, priority = ? WHERE id = ?", title, priority, id)
 	if err != nil {
 		return Task{}, err

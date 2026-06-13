@@ -68,7 +68,7 @@ export function AddQuicklinkModal({ open, onOpenChange, onSave, children }: AddQ
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoFocus
-                className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-[13px] outline-none text-[var(--text)] placeholder:text-[var(--text-faint)] focus:border-[var(--accent)] focus:bg-[var(--bg)] transition-all duration-200"
+                className="field-input"
               />
             </div>
             <div>
@@ -87,7 +87,7 @@ export function AddQuicklinkModal({ open, onOpenChange, onSave, children }: AddQ
                 placeholder="github.com"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-[13px] outline-none text-[var(--text)] placeholder:text-[var(--text-faint)] focus:border-[var(--accent)] focus:bg-[var(--bg)] transition-all duration-200"
+                className="field-input"
               />
             </div>
             <div className="flex gap-2 pt-2">
